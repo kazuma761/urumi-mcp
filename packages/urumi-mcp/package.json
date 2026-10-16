@@ -1,0 +1,29 @@
+{
+  "name": "urumi-mcp",
+  "version": "0.1.0",
+  "description": "Use a Urumi MCP gateway from any MCP client (Claude Code, Codex, Cursor, Claude Desktop), or run the WooCommerce MCP server against your own store.",
+  "type": "module",
+  "bin": { "urumi-mcp": "dist/cli.js" },
+  "files": ["dist", "README.md"],
+  "engines": { "node": ">=20" },
+  "keywords": ["mcp", "model-context-protocol", "woocommerce", "gateway", "claude", "codex", "cursor"],
+  "repository": { "type": "git", "url": "git+https://github.com/kazuma761/urumi-mcp.git", "directory": "packages/urumi-mcp" },
+  "homepage": "https://github.com/kazuma761/urumi-mcp#readme",
+  "license": "MIT",
+  "scripts": {
+    "build": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --packages=external --banner:js='#!/usr/bin/env node' --outfile=dist/cli.js",
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "2.3.1",
+    "@modelcontextprotocol/server": "2.3.1",
+    "zod": "4.6.6"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
+  }
+}

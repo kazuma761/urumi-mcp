@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.DS_Store
+# Other people's projects used for study; not part of this submission.
+reference/
+# Local secrets (LLM key etc.). Never commit.
+values-secrets*.yaml
+.env
+
+# Demo film project (HyperFrames); not part of the code submission.
+videos/

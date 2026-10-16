@@ -1,0 +1,10 @@
+{
+  "name": "urumi-gateway",
+  "version": "0.1.0",
+  "description": "Connect Claude Code to a Urumi MCP gateway: every tool your team's admin has connected (WooCommerce, and any other MCP server) through one URL and your personal API key.",
+  "author": { "name": "kazuma761", "url": "https://github.com/kazuma761" },
+  "homepage": "https://github.com/kazuma761/urumi-mcp",
+  "repository": "https://github.com/kazuma761/urumi-mcp",
+  "license": "MIT",
+  "keywords": ["mcp", "gateway", "woocommerce", "kubernetes", "team"]
+}

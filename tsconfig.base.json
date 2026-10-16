@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "module": "nodenext",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    // Node runs the .ts sources directly by erasing types, so only erasable syntax is allowed.
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true
+  }
+}

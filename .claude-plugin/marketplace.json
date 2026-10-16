@@ -1,0 +1,18 @@
+{
+  "name": "urumi-mcp",
+  "owner": { "name": "kazuma761", "url": "https://github.com/kazuma761" },
+  "metadata": {
+    "description": "Urumi MCP gateway: one URL and one personal key for every MCP server your team uses.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "urumi-gateway",
+      "source": "./plugin",
+      "description": "Connect Claude Code to a Urumi MCP gateway with your personal API key.",
+      "version": "0.1.0",
+      "category": "integration",
+      "keywords": ["mcp", "gateway", "woocommerce"]
+    }
+  ]
+}

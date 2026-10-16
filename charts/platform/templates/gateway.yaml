@@ -1,0 +1,65 @@
+{{- $host := printf "%s.%s" .Values.gateway.host .Values.global.domain }}
+apiVersion: v1
+kind: Service
+metadata: { name: gateway, labels: { app.kubernetes.io/name: gateway } }
+spec:
+  selector: { app.kubernetes.io/name: gateway }
+  ports: [{ name: http, port: 8080, targetPort: http }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: gateway, labels: { app.kubernetes.io/name: gateway } }
+spec:
+  replicas: {{ .Values.gateway.replicas }}
+  selector: { matchLabels: { app.kubernetes.io/name: gateway } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: gateway }
+      # Everything in the Secret is read at start, so the pod restarts when it changes,
+      # for example when the store is reinstalled with a new woo-mcp token.
+      annotations: { checksum/secrets: {{ include (print $.Template.BasePath "/secrets.yaml") . | sha256sum }} }
+    spec:
+      automountServiceAccountToken: false
+      securityContext: { runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: gateway
+          image: "{{ .Values.gateway.image.repository }}:{{ .Values.gateway.image.tag }}"
+          imagePullPolicy: {{ .Values.gateway.image.pullPolicy }}
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: [ALL] } }
+          ports: [{ name: http, containerPort: 8080 }]
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: postgres, key: password } }
+            - { name: DATABASE_URL, value: "postgres://gateway:$(POSTGRES_PASSWORD)@postgres:5432/gateway" }
+            - { name: ADMIN_EMAIL, value: {{ .Values.gateway.adminEmail | quote }} }
+            - { name: COOKIE_SECURE, value: {{ .Values.global.tls.enabled | quote }} }
+            - { name: UPSTREAM_ALLOWED_HOSTS, value: {{ join "," .Values.gateway.allowedHosts | quote }} }
+            - { name: LLM_BASE_URL, value: {{ .Values.llm.baseUrl | quote }} }
+            - { name: LLM_MODEL, value: {{ .Values.llm.model | quote }} }
+            - { name: LLM_MAX_STEPS, value: {{ .Values.llm.maxSteps | quote }} }
+            {{- range $env, $key := dict "ADMIN_PASSWORD" "admin-password" "SESSION_SECRET" "session-secret" "ENCRYPTION_KEY" "encryption-key" "LLM_API_KEY" "llm-api-key" "SEED_SERVERS" "seed-servers" }}
+            - name: {{ $env }}
+              valueFrom: { secretKeyRef: { name: gateway, key: {{ $key }} } }
+            {{- end }}
+          # Alive: the process answers. Ready: it also reaches Postgres. Never tied to an upstream.
+          readinessProbe: { httpGet: { path: /readyz, port: http }, periodSeconds: 5 }
+          livenessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 20 }
+          resources: {{- toYaml .Values.gateway.resources | nindent 12 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app
+  {{- if .Values.global.tls.enabled }}
+  annotations: { cert-manager.io/cluster-issuer: {{ .Values.global.tls.clusterIssuer | quote }} }
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingressClassName }}
+  {{- if .Values.global.tls.enabled }}
+  tls: [{ hosts: [{{ $host | quote }}], secretName: app-tls }]
+  {{- end }}
+  rules:
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          - { path: /, pathType: Prefix, backend: { service: { name: gateway, port: { name: http } } } }

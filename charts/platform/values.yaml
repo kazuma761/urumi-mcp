@@ -1,0 +1,58 @@
+global:
+  domain: 127.0.0.1.nip.io
+  storageClass: local-path
+  tls:
+    enabled: false
+    clusterIssuer: ""
+ingressClassName: traefik
+
+gateway:
+  host: app              # dashboard, /api and /mcp all on <host>.<global.domain>
+  image: { repository: urumi/gateway, tag: dev, pullPolicy: IfNotPresent }
+  replicas: 1
+  adminEmail: admin@urumi.local
+  # In-cluster hosts an admin may register even though they resolve to private addresses.
+  allowedHosts: [woo-mcp.store.svc, everything.upstreams.svc, toolbox.upstreams.svc]
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: "1", memory: 384Mi }
+
+# Chat agent. Put apiKey in the gitignored values-secrets.yaml, never here.
+llm:
+  baseUrl: https://openrouter.ai/api/v1
+  model: anthropic/claude-haiku-5.5
+  apiKey: ""
+  maxSteps: 8
+
+postgres:
+  image: { repository: postgres, tag: 17-alpine, pullPolicy: IfNotPresent }
+  storage: 2Gi
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 384Mi }
+
+# Upstreams the gateway starts with ("managed"). A credential is never written here:
+# it is copied at install time from a Secret in the upstream's own namespace.
+seedServers:
+  - slug: woo
+    name: WooCommerce
+    url: http://woo-mcp.store.svc:3000/mcp
+    authType: bearer
+    credentialFrom: { namespace: store, secret: woo-mcp, key: bearer-token }
+  - slug: everything
+    name: Everything
+    url: http://everything.upstreams.svc:3001/mcp
+    authType: none
+  - slug: toolbox
+    name: Toolbox
+    url: http://toolbox.upstreams.svc:3000/mcp
+    authType: header
+    authHeader: X-Api-Key
+    credentialFrom: { namespace: upstreams, secret: toolbox, key: api-key }
+
+networkPolicy:
+  ingressController:
+    namespace: kube-system
+    podLabels: { app.kubernetes.io/name: traefik }
+  # Namespaces whose pods the gateway may call as upstreams.
+  upstreamNamespaces: [store, upstreams]

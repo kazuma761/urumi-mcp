@@ -1,0 +1,12 @@
+# Local cluster: k3s in Docker. Same distribution as the VPS target, so Traefik,
+# local-path storage and NetworkPolicy enforcement behave the same in both.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: urumi
+servers: 1
+ports:
+  - port: 80:80
+    nodeFilters: [loadbalancer]
+  - port: 443:443
+    nodeFilters: [loadbalancer]

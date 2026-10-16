@@ -1,0 +1,11 @@
+# k3s on a VPS. Set global.domain; the LLM key goes in values-secrets.yaml.
+global:
+  domain: urumi.example.com
+  tls:
+    enabled: true
+    clusterIssuer: letsencrypt-prod
+gateway:
+  replicas: 2   # holds no state, so a second replica is only this line
+  image: { pullPolicy: Always }
+postgres:
+  storage: 10Gi

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "urumi": {
+      "type": "http",
+      "url": "${URUMI_GATEWAY_URL}/mcp",
+      "headers": { "Authorization": "Bearer ${URUMI_API_KEY}" }
+    }
+  }
+}

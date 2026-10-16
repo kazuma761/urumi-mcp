@@ -1,0 +1,17 @@
+# Each entry becomes a Deployment and a ClusterIP Service named after it.
+servers:
+  # The MCP reference server: a third-party upstream with many tools, one of them "echo".
+  everything:
+    image: { repository: urumi/everything, tag: dev, pullPolicy: IfNotPresent }
+    port: 3001
+  # Ours: needs an X-Api-Key header, and also has an "echo" tool, to show collisions.
+  toolbox:
+    image: { repository: urumi/toolbox-mcp, tag: dev, pullPolicy: IfNotPresent }
+    port: 3000
+    apiKeySecret: toolbox
+resources:
+  requests: { cpu: 25m, memory: 64Mi }
+  limits: { cpu: 500m, memory: 192Mi }
+gateway:
+  namespace: platform
+  podLabels: { app.kubernetes.io/name: gateway }

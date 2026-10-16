@@ -1,0 +1,83 @@
+# Uploads, plugins and wp-config.php live on this volume; it is kept if the release is uninstalled.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wordpress
+  labels: {{- include "store.labels" (list $ "wordpress") | nindent 4 }}
+  annotations: { helm.sh/resource-policy: keep }
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: {{ .Values.global.storageClass | quote }}
+  resources: { requests: { storage: {{ .Values.wordpress.storage }} } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress
+  labels: {{- include "store.labels" (list $ "wordpress") | nindent 4 }}
+spec:
+  selector: {{- include "store.match" (list $ "wordpress") | nindent 4 }}
+  ports: [{ name: http, port: 80, targetPort: http }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress
+  labels: {{- include "store.labels" (list $ "wordpress") | nindent 4 }}
+spec:
+  replicas: 1
+  # A ReadWriteOnce volume: the old pod has to let go before the new one mounts it.
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: {{- include "store.match" (list $ "wordpress") | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "store.labels" (list $ "wordpress") | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: wordpress
+          image: "{{ .Values.wordpress.image.repository }}:{{ .Values.wordpress.image.tag }}"
+          imagePullPolicy: {{ .Values.wordpress.image.pullPolicy }}
+          # Third-party image: Apache starts as root to bind :80, then serves as www-data.
+          securityContext: { allowPrivilegeEscalation: false }
+          env: {{- include "store.wordpressEnv" . | nindent 12 }}
+          ports: [{ name: http, containerPort: 80 }]
+          # First start copies WordPress onto the empty volume before Apache listens.
+          startupProbe:
+            tcpSocket: { port: http }
+            periodSeconds: 5
+            failureThreshold: 60
+          # Runs PHP and opens a database connection; a redirect (before setup) counts as up.
+          readinessProbe:
+            httpGet: { path: /wp-login.php, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 5
+          # Port only: a database outage must not make Kubernetes restart Apache.
+          livenessProbe:
+            tcpSocket: { port: http }
+            periodSeconds: 20
+          resources: {{- toYaml .Values.wordpress.resources | nindent 12 }}
+          volumeMounts: [{ name: html, mountPath: /var/www/html }]
+      volumes:
+        - name: html
+          persistentVolumeClaim: { claimName: wordpress }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: storefront
+  labels: {{- include "store.labels" (list $ "wordpress") | nindent 4 }}
+  {{- with .Values.global.tls }}{{ if .enabled }}
+  annotations: { cert-manager.io/cluster-issuer: {{ .clusterIssuer | quote }} }
+  {{- end }}{{ end }}
+spec:
+  ingressClassName: {{ .Values.ingressClassName }}
+  {{- if .Values.global.tls.enabled }}
+  tls: [{ hosts: [{{ include "store.host" . | quote }}], secretName: storefront-tls }]
+  {{- end }}
+  rules:
+    - host: {{ include "store.host" . | quote }}
+      http:
+        paths:
+          - { path: /, pathType: Prefix, backend: { service: { name: wordpress, port: { name: http } } } }

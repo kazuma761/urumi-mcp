@@ -1,0 +1,72 @@
+{{- range $name, $s := .Values.servers }}
+{{- $match := dict "app.kubernetes.io/name" $name "app.kubernetes.io/instance" $.Release.Name }}
+---
+apiVersion: v1
+kind: Service
+metadata: { name: {{ $name }}, labels: {{ toJson $match }} }
+spec:
+  selector: {{ toJson $match }}
+  ports: [{ name: http, port: {{ $s.port }}, targetPort: http }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: {{ $name }}, labels: {{ toJson $match }} }
+spec:
+  replicas: 1
+  selector: { matchLabels: {{ toJson $match }} }
+  template:
+    metadata: { labels: {{ toJson $match }} }
+    spec:
+      automountServiceAccountToken: false
+      # Short, so a killed pod's replacement starts quickly in the demo.
+      terminationGracePeriodSeconds: 5
+      securityContext: { runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: {{ $name }}
+          image: "{{ $s.image.repository }}:{{ $s.image.tag }}"
+          imagePullPolicy: {{ $s.image.pullPolicy }}
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: [ALL] } }
+          ports: [{ name: http, containerPort: {{ $s.port }} }]
+          env:
+            - { name: PORT, value: {{ $s.port | quote }} }
+            {{- with $s.apiKeySecret }}
+            - name: TOOLBOX_API_KEY
+              valueFrom: { secretKeyRef: { name: {{ . }}, key: api-key } }
+            {{- end }}
+          # A TCP check works for both: the reference server has no health route.
+          readinessProbe: { tcpSocket: { port: http }, periodSeconds: 5 }
+          livenessProbe: { tcpSocket: { port: http }, periodSeconds: 20 }
+          resources: {{- toYaml $.Values.resources | nindent 12 }}
+          volumeMounts: [{ name: tmp, mountPath: /tmp }]
+      volumes: [{ name: tmp, emptyDir: {} }]
+{{- end }}
+---
+# Generated in the cluster on first install and reused after; the gateway reads it with lookup.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: toolbox
+  annotations: { helm.sh/resource-policy: keep }
+type: Opaque
+data:
+  api-key: {{ get ((lookup "v1" "Secret" .Release.Namespace "toolbox").data | default dict) "api-key" | default (randAlphaNum 40 | b64enc) }}
+---
+# Nothing in or out by default. These servers need no network of their own.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: deny-all }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# The gateway's pods, and only them, may call any server here.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: from-gateway }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: {{ .Values.gateway.namespace }} } }
+          podSelector: { matchLabels: {{ toJson .Values.gateway.podLabels }} }

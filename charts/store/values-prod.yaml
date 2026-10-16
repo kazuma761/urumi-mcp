@@ -1,0 +1,14 @@
+# k3s on a VPS. Set global.domain to a name whose store. and app. records point at it.
+global:
+  domain: urumi.example.com
+  tls:
+    enabled: true
+    clusterIssuer: letsencrypt-prod
+mariadb:
+  storage: 10Gi
+wordpress:
+  storage: 10Gi
+  image: { pullPolicy: Always }
+wooMcp:
+  replicas: 2   # stateless, so a second replica needs nothing else
+  image: { pullPolicy: Always }

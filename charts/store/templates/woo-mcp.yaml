@@ -1,0 +1,46 @@
+# Internal only: a ClusterIP Service, no Ingress, and a NetworkPolicy that admits the gateway alone.
+apiVersion: v1
+kind: Service
+metadata:
+  name: woo-mcp
+  labels: {{- include "store.labels" (list $ "woo-mcp") | nindent 4 }}
+spec:
+  selector: {{- include "store.match" (list $ "woo-mcp") | nindent 4 }}
+  ports: [{ name: http, port: 3000, targetPort: http }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: woo-mcp
+  labels: {{- include "store.labels" (list $ "woo-mcp") | nindent 4 }}
+spec:
+  replicas: {{ .Values.wooMcp.replicas }}
+  selector:
+    matchLabels: {{- include "store.match" (list $ "woo-mcp") | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "store.labels" (list $ "woo-mcp") | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: { runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: woo-mcp
+          image: "{{ .Values.wooMcp.image.repository }}:{{ .Values.wooMcp.image.tag }}"
+          imagePullPolicy: {{ .Values.wooMcp.image.pullPolicy }}
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: [ALL] } }
+          ports: [{ name: http, containerPort: 3000 }]
+          env:
+            - { name: WOO_URL, value: "http://wordpress" }
+            # WooCommerce checks signatures against its public address, always as http (TLS ends at the Ingress).
+            - { name: WOO_PUBLIC_HOST, value: {{ include "store.host" . | quote }} }
+            - { name: STORE_TIMEZONE, value: {{ .Values.store.timezone | quote }} }
+            - name: WOO_CONSUMER_KEY
+              valueFrom: { secretKeyRef: { name: woo-rest, key: consumer-key } }
+            - name: WOO_CONSUMER_SECRET
+              valueFrom: { secretKeyRef: { name: woo-rest, key: consumer-secret } }
+            - name: MCP_BEARER_TOKEN
+              valueFrom: { secretKeyRef: { name: woo-mcp, key: bearer-token } }
+          # Process health only: when the store is down the tools say so, the pod stays in service.
+          readinessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 5 }
+          livenessProbe: { httpGet: { path: /healthz, port: http }, periodSeconds: 20 }
+          resources: {{- toYaml .Values.wooMcp.resources | nindent 12 }}

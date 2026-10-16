@@ -1,0 +1,180 @@
+{{/*
+WordPress is installed and configured by WP-CLI, not by hand, so the demo can be
+rebuilt from nothing. Every step is guarded, so the Job is safe to re-run and
+runs again on every `helm upgrade`.
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bootstrap
+  labels: {{- include "store.labels" (list $ "bootstrap") | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation
+data:
+  bootstrap.sh: |
+    set -eu
+    WP="wp --path=/var/www/html"
+
+    # The WordPress pod copies core onto the empty volume on first boot; until it
+    # has, there is nothing for WP-CLI to run against.
+    i=0
+    until [ -f /var/www/html/wp-load.php ]; do
+      i=$((i + 2)); [ "$i" -ge "$WAIT_TIMEOUT" ] && { echo "wp-load.php never appeared"; exit 1; }
+      echo "waiting for WordPress core files..."; sleep 2
+    done
+    i=0
+    until $WP db check >/dev/null 2>&1; do
+      i=$((i + 2)); [ "$i" -ge "$WAIT_TIMEOUT" ] && { echo "database never answered"; exit 1; }
+      echo "waiting for the database..."; sleep 2
+    done
+
+    if ! $WP core is-installed; then
+      $WP core install --url="$SITE_URL" --title="$SITE_TITLE" \
+        --admin_user="$ADMIN_USER" --admin_password="$ADMIN_PASSWORD" \
+        --admin_email="$ADMIN_EMAIL" --skip-email
+    fi
+
+    # woo-mcp reads the REST API at /wp-json/..., which only exists with pretty
+    # permalinks; --hard writes the .htaccess rules Apache needs for them.
+    $WP option update timezone_string "$STORE_TIMEZONE"
+    $WP rewrite structure '/%postname%/' --hard
+    $WP rewrite flush --hard
+
+    if [ "$($WP plugin list --name=woocommerce --field=version 2>/dev/null)" != "$WC_VERSION" ]; then
+      $WP plugin install woocommerce --version="$WC_VERSION" --force
+    fi
+    $WP plugin activate woocommerce
+    # Activation queues the page/table setup on the next request; run it now.
+    $WP wc tool run install_pages --user="$ADMIN_USER"
+
+    $WP option update woocommerce_default_country "$STORE_COUNTRY"
+    $WP option update woocommerce_currency "$STORE_CURRENCY"
+    $WP option update woocommerce_enable_guest_checkout yes
+    $WP option update woocommerce_calc_taxes no
+    # A fresh WooCommerce hides the whole site behind "coming soon" and shows the
+    # onboarding wizard; both would stop a visitor reaching the storefront.
+    $WP option update woocommerce_coming_soon no
+    $WP option update woocommerce_store_pages_only no
+    $WP option update woocommerce_onboarding_profile --format=json '{"skipped":true,"completed":true}'
+    # The brief's checkout is Cash on Delivery.
+    $WP option update woocommerce_cod_settings --format=json \
+      '{"enabled":"yes","title":"Cash on delivery","description":"Pay with cash upon delivery.","instructions":"Pay with cash upon delivery.","enable_for_methods":[],"enable_for_virtual":"yes"}'
+
+    # Without a shipping method a physical product cannot be checked out at all.
+    # Zone 0 is "everywhere my other zones do not cover", so one method covers the world.
+    if ! $WP wc shipping_zone_method list 0 --user="$ADMIN_USER" --field=method_id 2>/dev/null | grep -q free_shipping; then
+      $WP wc shipping_zone_method create 0 --method_id=free_shipping --user="$ADMIN_USER"
+    fi
+
+    {{- range .Values.store.products }}
+    if [ "$($WP wc product list --sku={{ .sku | quote }} --user="$ADMIN_USER" --format=count)" = "0" ]; then
+      $WP wc product create --name={{ .name | quote }} --sku={{ .sku | quote }} \
+        --regular_price={{ .price | quote }} --status=publish --manage_stock=false --user="$ADMIN_USER"
+    fi
+    {{- end }}
+
+    $WP eval-file /bootstrap/rest-key.php
+    $WP cache flush
+    echo "bootstrap complete"
+
+  # WP-CLI runs in its own container and cannot see Apache, so `rewrite --hard`
+  # would refuse to write .htaccess. Without those rules /wp-json 404s and woo-mcp
+  # has no REST API to call.
+  wp-cli.yml: |
+    apache_modules:
+      - mod_rewrite
+
+  # The WooCommerce REST key woo-mcp signs with. WooCommerce keeps only an HMAC of
+  # the key, so it cannot be registered with `wp option update`.
+  rest-key.php: |
+    <?php
+    global $wpdb;
+    $key = getenv('WOO_CONSUMER_KEY');
+    $secret = getenv('WOO_CONSUMER_SECRET');
+    if (!$key || !$secret) { WP_CLI::error('WOO_CONSUMER_KEY / WOO_CONSUMER_SECRET are not set'); }
+    $table = $wpdb->prefix . 'woocommerce_api_keys';
+    $hash = wc_api_hash($key);
+    $existing = $wpdb->get_var($wpdb->prepare("SELECT key_id FROM {$table} WHERE consumer_key = %s", $hash));
+    if ($existing) { WP_CLI::success("REST key already registered (key_id $existing)"); return; }
+    $user = get_user_by('login', getenv('ADMIN_USER'));
+    if (!$user) { WP_CLI::error('admin user not found'); }
+    $wpdb->insert($table, array(
+      'user_id' => $user->ID,
+      'description' => 'urumi woo-mcp',
+      'permissions' => 'read_write',
+      'consumer_key' => $hash,
+      'consumer_secret' => $secret,
+      'truncated_key' => substr($key, -7),
+    ), array('%d', '%s', '%s', '%s', '%s', '%s'));
+    WP_CLI::success('REST key registered');
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: bootstrap
+  labels: {{- include "store.labels" (list $ "bootstrap") | nindent 4 }}
+  annotations:
+    # Runs after WordPress and MariaDB exist; the script waits for both.
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: {{ .Values.bootstrap.backoffLimit }}
+  activeDeadlineSeconds: {{ add .Values.bootstrap.waitTimeoutSeconds 600 }}
+  template:
+    metadata:
+      labels: {{- include "store.labels" (list $ "bootstrap") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      securityContext:
+        # The WP-CLI image is Alpine (www-data is uid 82), the WordPress image is
+        # Debian (uid 33) and owns the files on the volume. Run as the owner.
+        runAsUser: 33
+        runAsGroup: 33
+        runAsNonRoot: true
+      containers:
+        - name: wp-cli
+          image: {{ printf "%s:%s" .Values.bootstrap.image.repository .Values.bootstrap.image.tag | quote }}
+          imagePullPolicy: {{ .Values.bootstrap.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: ["ALL"] }
+          command: ["sh", "/bootstrap/bootstrap.sh"]
+          env:
+            {{- include "store.wordpressEnv" . | nindent 12 }}
+            # WP-CLI writes its cache and config under $HOME, which is / in this image.
+            - { name: HOME, value: /tmp }
+            - { name: WP_CLI_CACHE_DIR, value: /tmp/wp-cli-cache }
+            - { name: WP_CLI_CONFIG_PATH, value: /bootstrap/wp-cli.yml }
+            # WooCommerce's installer needs more than PHP's CLI default.
+            - { name: WP_CLI_PHP_ARGS, value: "-d memory_limit=512M" }
+            - { name: SITE_URL, value: {{ include "store.url" . | quote }} }
+            - { name: SITE_TITLE, value: {{ .Values.store.title | quote }} }
+            - { name: ADMIN_USER, value: {{ .Values.store.adminUser | quote }} }
+            - { name: ADMIN_EMAIL, value: {{ .Values.store.adminEmail | quote }} }
+            - { name: STORE_TIMEZONE, value: {{ .Values.store.timezone | quote }} }
+            - { name: STORE_COUNTRY, value: {{ .Values.store.country | quote }} }
+            - { name: STORE_CURRENCY, value: {{ .Values.store.currency | quote }} }
+            - { name: WC_VERSION, value: {{ .Values.bootstrap.woocommerceVersion | quote }} }
+            - { name: WAIT_TIMEOUT, value: {{ .Values.bootstrap.waitTimeoutSeconds | quote }} }
+            - name: ADMIN_PASSWORD
+              valueFrom: { secretKeyRef: { name: wordpress, key: admin-password } }
+            - name: WOO_CONSUMER_KEY
+              valueFrom: { secretKeyRef: { name: woo-rest, key: consumer-key } }
+            - name: WOO_CONSUMER_SECRET
+              valueFrom: { secretKeyRef: { name: woo-rest, key: consumer-secret } }
+          resources: {{- toYaml .Values.bootstrap.resources | nindent 12 }}
+          volumeMounts:
+            - { name: html, mountPath: /var/www/html }
+            - { name: bootstrap, mountPath: /bootstrap, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        # Same ReadWriteOnce volume as the WordPress pod: one node, so both mount it.
+        - name: html
+          persistentVolumeClaim: { claimName: wordpress }
+        - name: bootstrap
+          configMap: { name: bootstrap }
+        - name: tmp
+          emptyDir: {}
