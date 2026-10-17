@@ -123,7 +123,7 @@ importers:
         specifier: 7.0.2
         version: 7.0.2
 
-  packages/urumi-mcp:
+  packages/wook8-mcp:
     dependencies:
       '@modelcontextprotocol/client':
         specifier: 2.3.1

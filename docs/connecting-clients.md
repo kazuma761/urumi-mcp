@@ -10,10 +10,10 @@ Below, replace `https://app.example.com` with your gateway (locally:
 | Client | Fastest way |
 | --- | --- |
 | Claude Code | [Plugin](#claude-code-plugin) or [one command](#claude-code-one-command) |
-| Codex | [`config.toml`](#codex) with the `urumi-mcp` bridge |
+| Codex | [`config.toml`](#codex) with the `wook8-mcp` bridge |
 | Cursor, Claude Desktop, Windsurf, any `mcp.json` client | [JSON](#cursor-claude-desktop-and-other-mcpjson-clients) |
 | MCP Inspector | [Streamable HTTP](#mcp-inspector) |
-| Anything that only speaks stdio | [`npx urumi-mcp connect`](#any-stdio-client) |
+| Anything that only speaks stdio | [`npx wook8-mcp connect`](#any-stdio-client) |
 
 ## Claude Code: plugin
 
@@ -30,7 +30,7 @@ Then, inside Claude Code:
 
 ```
 /plugin marketplace add kazuma761/urumi-mcp
-/plugin install urumi-gateway@urumi-mcp
+/plugin install urumi-gateway@wook8-mcp
 ```
 
 Restart Claude Code so it picks up the two environment variables. `/mcp` lists the
@@ -45,13 +45,13 @@ claude mcp add --transport http urumi https://app.example.com/mcp \
 
 ## Codex
 
-Codex starts MCP servers as local processes, so it uses the `urumi-mcp` bridge.
+Codex starts MCP servers as local processes, so it uses the `wook8-mcp` bridge.
 Add to `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.urumi]
 command = "npx"
-args = ["-y", "urumi-mcp", "connect"]
+args = ["-y", "wook8-mcp", "connect"]
 env = { URUMI_GATEWAY_URL = "https://app.example.com", URUMI_API_KEY = "ugw_..." }
 ```
 
@@ -77,7 +77,7 @@ Clients that only start local processes:
   "mcpServers": {
     "urumi": {
       "command": "npx",
-      "args": ["-y", "urumi-mcp", "connect"],
+      "args": ["-y", "wook8-mcp", "connect"],
       "env": { "URUMI_GATEWAY_URL": "https://app.example.com", "URUMI_API_KEY": "ugw_..." }
     }
   }
@@ -96,12 +96,12 @@ Transport **Streamable HTTP**, URL `https://app.example.com/mcp`, header
 ## Any stdio client
 
 ```bash
-npx -y urumi-mcp connect --url https://app.example.com --key ugw_...
+npx -y wook8-mcp connect --url https://app.example.com --key ugw_...
 ```
 
 The bridge speaks MCP over stdin/stdout and forwards every request to the gateway,
 so the gateway's permissions, timeouts and audit log still apply.
-`npx -y urumi-mcp config --url ... --key ...` prints all of the snippets on this
+`npx -y wook8-mcp config --url ... --key ...` prints all of the snippets on this
 page, filled in.
 
 ## What you will see
@@ -127,7 +127,7 @@ revoked, the next call fails with HTTP 401.
 
 ## Using the WooCommerce MCP server without a gateway
 
-`urumi-mcp` also runs the WooCommerce MCP server on its own, against any store. Create
+`wook8-mcp` also runs the WooCommerce MCP server on its own, against any store. Create
 a REST key in **WooCommerce → Settings → Advanced → REST API** (read/write), then:
 
 ```json
@@ -135,7 +135,7 @@ a REST key in **WooCommerce → Settings → Advanced → REST API** (read/write
   "mcpServers": {
     "woocommerce": {
       "command": "npx",
-      "args": ["-y", "urumi-mcp", "woo"],
+      "args": ["-y", "wook8-mcp", "woo"],
       "env": {
         "WOO_URL": "https://shop.example.com",
         "WOO_CONSUMER_KEY": "ck_...",

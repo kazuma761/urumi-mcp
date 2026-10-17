@@ -12,7 +12,7 @@ diagrams are in [docs/architecture.md](docs/architecture.md).
 | `apps/toolbox-mcp` | Small demo MCP server: header credential, colliding `echo` tool |
 | `apps/gateway` | Gateway backend: upstream registry, `/mcp`, REST API, chat agent, migrations |
 | `apps/dashboard` | React dashboard (Vite), served by the gateway |
-| `packages/urumi-mcp` | npm CLI: stdio bridge to a gateway, standalone WooCommerce MCP |
+| `packages/wook8-mcp` | npm CLI: stdio bridge to a gateway, standalone WooCommerce MCP |
 | `plugin/`, `.claude-plugin/` | Claude Code plugin and its marketplace manifest |
 | `charts/{store,upstreams,platform}` | Helm charts, one per namespace |
 | `docker/` | One Dockerfile per image; build context is the repo root |
@@ -43,7 +43,7 @@ apps/gateway/dev.sh          # gateway outside the cluster, for backend/dashboar
 - Every workload has readiness and liveness probes and resource requests and limits.
 - Our containers run as non-root with a read-only root filesystem and all capabilities dropped.
 - **TypeScript runs directly on Node (type stripping, no build step)** for the apps
-  (the published `urumi-mcp` CLI is the one bundled package): erasable syntax only (no enums, no parameter properties), relative imports
+  (the published `wook8-mcp` CLI is the one bundled package): erasable syntax only (no enums, no parameter properties), relative imports
   end in `.ts`, `import type` for types. `tsc --noEmit` is the type checker.
 - **Database types come from the Drizzle schema** in `apps/gateway/src/lib/schema.ts`
   (`typeof table.$inferSelect`). Narrow with `Pick`/`Omit`; never hand-write a row

@@ -69,7 +69,7 @@ flowchart LR
 | gateway | [`apps/gateway`](../apps/gateway) | Upstream registry, `/mcp`, dashboard API, audit log, chat agent. |
 | dashboard | [`apps/dashboard`](../apps/dashboard) | React app, served by the gateway. |
 | everything, toolbox | [`charts/upstreams`](../charts/upstreams) | Two more upstreams, one with a header credential and a colliding tool name. |
-| urumi-mcp CLI | [`packages/urumi-mcp`](../packages/urumi-mcp) | Bridges any stdio MCP client to a gateway; runs woo-mcp on its own. |
+| wook8-mcp CLI | [`packages/wook8-mcp`](../packages/wook8-mcp) | Bridges any stdio MCP client to a gateway; runs woo-mcp on its own. |
 
 ## Kubernetes topology
 

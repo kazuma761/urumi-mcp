@@ -1,5 +1,5 @@
 {
-  "name": "urumi-mcp",
+  "name": "wook8-mcp",
   "owner": { "name": "kazuma761", "url": "https://github.com/kazuma761" },
   "metadata": {
     "description": "Urumi MCP gateway: one URL and one personal key for every MCP server your team uses.",

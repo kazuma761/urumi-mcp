@@ -11,7 +11,7 @@ COPY apps/woo-mcp/package.json apps/woo-mcp/
 COPY apps/toolbox-mcp/package.json apps/toolbox-mcp/
 COPY apps/gateway/package.json apps/gateway/
 COPY apps/dashboard/package.json apps/dashboard/
-COPY packages/urumi-mcp/package.json packages/urumi-mcp/
+COPY packages/wook8-mcp/package.json packages/wook8-mcp/
 RUN pnpm install --frozen-lockfile --prod --filter toolbox-mcp
 
 COPY tsconfig.base.json ./

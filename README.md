@@ -88,7 +88,7 @@ export URUMI_GATEWAY_URL=http://app.127.0.0.1.nip.io URUMI_API_KEY=ugw_...
 ```
 ```
 /plugin marketplace add kazuma761/urumi-mcp
-/plugin install urumi-gateway@urumi-mcp
+/plugin install urumi-gateway@wook8-mcp
 ```
 
 **Claude Code: one command**
@@ -97,13 +97,13 @@ export URUMI_GATEWAY_URL=http://app.127.0.0.1.nip.io URUMI_API_KEY=ugw_...
 claude mcp add --transport http urumi http://app.127.0.0.1.nip.io/mcp --header "Authorization: Bearer ugw_..."
 ```
 
-**Codex, Cursor, Claude Desktop, any stdio client** via the [`urumi-mcp`](packages/urumi-mcp) bridge
+**Codex, Cursor, Claude Desktop, any stdio client** via the [`wook8-mcp`](packages/wook8-mcp) bridge
 
 ```toml
 # ~/.codex/config.toml
 [mcp_servers.urumi]
 command = "npx"
-args = ["-y", "urumi-mcp", "connect"]
+args = ["-y", "wook8-mcp", "connect"]
 env = { URUMI_GATEWAY_URL = "http://app.127.0.0.1.nip.io", URUMI_API_KEY = "ugw_..." }
 ```
 
@@ -111,8 +111,8 @@ Every client sees the same tools: `woo__list_orders`, `woo__create_product`,
 `everything__echo`, `toolbox__echo` and the rest. Try *"What orders came in today?"*
 All clients, including MCP Inspector and JSON configs: [docs/connecting-clients.md](docs/connecting-clients.md).
 
-> **No gateway, just a store?** `npx -y urumi-mcp woo` runs the WooCommerce MCP server
-> against any WooCommerce site with a REST key. See [packages/urumi-mcp](packages/urumi-mcp).
+> **No gateway, just a store?** `npx -y wook8-mcp woo` runs the WooCommerce MCP server
+> against any WooCommerce site with a REST key. See [packages/wook8-mcp](packages/wook8-mcp).
 
 ## How it works
 
@@ -179,7 +179,7 @@ apps/
   woo-mcp/          WooCommerce MCP server
   toolbox-mcp/      small demo MCP server (header credential, colliding tool name)
 packages/
-  urumi-mcp/        npm CLI: stdio bridge to a gateway, standalone WooCommerce MCP
+  wook8-mcp/        npm CLI: stdio bridge to a gateway, standalone WooCommerce MCP
 plugin/             Claude Code plugin (MCP server + skill)
 .claude-plugin/     Claude Code marketplace manifest
 charts/

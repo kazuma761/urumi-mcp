@@ -1,12 +1,12 @@
-# urumi-mcp
+# wook8-mcp
 
 Use a [Urumi MCP gateway](https://github.com/kazuma761/urumi-mcp) from any MCP client,
 or run the WooCommerce MCP server against your own store. No install step: `npx`.
 
 ```bash
-npx -y urumi-mcp connect --url https://app.example.com --key ugw_...   # stdio bridge to a gateway
-npx -y urumi-mcp woo                                                   # WooCommerce MCP over stdio
-npx -y urumi-mcp config  --url https://app.example.com --key ugw_...   # print client config snippets
+npx -y wook8-mcp connect --url https://app.example.com --key ugw_...   # stdio bridge to a gateway
+npx -y wook8-mcp woo                                                   # WooCommerce MCP over stdio
+npx -y wook8-mcp config  --url https://app.example.com --key ugw_...   # print client config snippets
 ```
 
 ## `connect`: one gateway, every tool
@@ -20,7 +20,7 @@ Codex, `~/.codex/config.toml`:
 ```toml
 [mcp_servers.urumi]
 command = "npx"
-args = ["-y", "urumi-mcp", "connect"]
+args = ["-y", "wook8-mcp", "connect"]
 env = { URUMI_GATEWAY_URL = "https://app.example.com", URUMI_API_KEY = "ugw_..." }
 ```
 
@@ -31,7 +31,7 @@ Any `mcp.json` client:
   "mcpServers": {
     "urumi": {
       "command": "npx",
-      "args": ["-y", "urumi-mcp", "connect"],
+      "args": ["-y", "wook8-mcp", "connect"],
       "env": { "URUMI_GATEWAY_URL": "https://app.example.com", "URUMI_API_KEY": "ugw_..." }
     }
   }
@@ -48,7 +48,7 @@ store's timezone), `get_order`, `update_order_status`.
   "mcpServers": {
     "woocommerce": {
       "command": "npx",
-      "args": ["-y", "urumi-mcp", "woo"],
+      "args": ["-y", "wook8-mcp", "woo"],
       "env": {
         "WOO_URL": "https://shop.example.com",
         "WOO_CONSUMER_KEY": "ck_...",

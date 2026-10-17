@@ -1,13 +1,13 @@
 {
-  "name": "urumi-mcp",
+  "name": "wook8-mcp",
   "version": "0.1.0",
   "description": "Use a Urumi MCP gateway from any MCP client (Claude Code, Codex, Cursor, Claude Desktop), or run the WooCommerce MCP server against your own store.",
   "type": "module",
-  "bin": { "urumi-mcp": "dist/cli.js" },
+  "bin": { "wook8-mcp": "dist/cli.js" },
   "files": ["dist", "README.md"],
   "engines": { "node": ">=20" },
   "keywords": ["mcp", "model-context-protocol", "woocommerce", "gateway", "claude", "codex", "cursor"],
-  "repository": { "type": "git", "url": "git+https://github.com/kazuma761/urumi-mcp.git", "directory": "packages/urumi-mcp" },
+  "repository": { "type": "git", "url": "git+https://github.com/kazuma761/urumi-mcp.git", "directory": "packages/wook8-mcp" },
   "homepage": "https://github.com/kazuma761/urumi-mcp#readme",
   "license": "MIT",
   "scripts": {
