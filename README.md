@@ -36,6 +36,43 @@ once. Every teammate gets their own revocable API key and sees every tool, in Cl
 Code, Codex, Cursor or the built-in chat agent, and never sees an upstream credential.
 Every call lands in an audit log under the person who made it.
 
+## Connect your AI client
+
+Create a key in the dashboard under **API keys** (no gateway yet? see [Quickstart](#quickstart)), then pick your client.
+
+**Claude Code: plugin** (adds the server and a skill that knows the tools)
+
+```bash
+export URUMI_GATEWAY_URL=http://app.127.0.0.1.nip.io URUMI_API_KEY=ugw_...
+```
+```
+/plugin marketplace add kazuma761/urumi-mcp
+/plugin install urumi-gateway@wook8-mcp
+```
+
+**Claude Code: one command**
+
+```bash
+claude mcp add --transport http urumi http://app.127.0.0.1.nip.io/mcp --header "Authorization: Bearer ugw_..."
+```
+
+**Codex, Cursor, Claude Desktop, any stdio client** via the [`wook8-mcp`](packages/wook8-mcp) bridge
+
+```toml
+# ~/.codex/config.toml
+[mcp_servers.urumi]
+command = "npx"
+args = ["-y", "wook8-mcp", "connect"]
+env = { URUMI_GATEWAY_URL = "http://app.127.0.0.1.nip.io", URUMI_API_KEY = "ugw_..." }
+```
+
+Every client sees the same tools: `woo__list_orders`, `woo__create_product`,
+`everything__echo`, `toolbox__echo` and the rest. Try *"What orders came in today?"*
+All clients, including MCP Inspector and JSON configs: [docs/connecting-clients.md](docs/connecting-clients.md).
+
+> **No gateway, just a store?** `npx -y wook8-mcp woo` runs the WooCommerce MCP server
+> against any WooCommerce site with a REST key. See [packages/wook8-mcp](packages/wook8-mcp).
+
 ## What you get
 
 | | |
@@ -76,43 +113,6 @@ MCP endpoint        http://app.127.0.0.1.nip.io/mcp          (create a key under
 
 `make e2e` then runs the 82 end-to-end checks against what was installed. Deploying to
 a server instead: [docs/deployment.md](docs/deployment.md).
-
-## Connect your AI client
-
-Create a key in the dashboard under **API keys**, then pick your client.
-
-**Claude Code: plugin** (adds the server and a skill that knows the tools)
-
-```bash
-export URUMI_GATEWAY_URL=http://app.127.0.0.1.nip.io URUMI_API_KEY=ugw_...
-```
-```
-/plugin marketplace add kazuma761/urumi-mcp
-/plugin install urumi-gateway@wook8-mcp
-```
-
-**Claude Code: one command**
-
-```bash
-claude mcp add --transport http urumi http://app.127.0.0.1.nip.io/mcp --header "Authorization: Bearer ugw_..."
-```
-
-**Codex, Cursor, Claude Desktop, any stdio client** via the [`wook8-mcp`](packages/wook8-mcp) bridge
-
-```toml
-# ~/.codex/config.toml
-[mcp_servers.urumi]
-command = "npx"
-args = ["-y", "wook8-mcp", "connect"]
-env = { URUMI_GATEWAY_URL = "http://app.127.0.0.1.nip.io", URUMI_API_KEY = "ugw_..." }
-```
-
-Every client sees the same tools: `woo__list_orders`, `woo__create_product`,
-`everything__echo`, `toolbox__echo` and the rest. Try *"What orders came in today?"*
-All clients, including MCP Inspector and JSON configs: [docs/connecting-clients.md](docs/connecting-clients.md).
-
-> **No gateway, just a store?** `npx -y wook8-mcp woo` runs the WooCommerce MCP server
-> against any WooCommerce site with a REST key. See [packages/wook8-mcp](packages/wook8-mcp).
 
 ## How it works
 
