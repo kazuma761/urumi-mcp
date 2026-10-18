@@ -89,9 +89,14 @@ All clients, including MCP Inspector and JSON configs: [docs/connecting-clients.
 | ☸️ **Kubernetes-native** | Three Helm charts, default-deny NetworkPolicies, non-root containers, local and prod via values only. |
 
 <p align="center">
-  <img alt="One request travels from Claude Code through the gateway to WooCommerce" src="docs/assets/still-request.png" width="49%">
-  <img alt="Kill an upstream pod: the others keep answering" src="docs/assets/still-failover.png" width="49%">
+  <img alt="Dashboard chat agent answering what orders came in today with the woo__list_orders tool" src="docs/assets/ui-chat.png" width="49%">
+  <img alt="Servers page: Everything unreachable while Toolbox and WooCommerce stay connected" src="docs/assets/ui-servers.png" width="49%">
 </p>
+<p align="center">
+  <img alt="Claude Code as a member, using tools from two upstream servers through the gateway" src="docs/assets/ui-claude-code.png" width="49%">
+  <img alt="Audit log: every call with user, tool, outcome and duration" src="docs/assets/ui-audit.png" width="49%">
+</p>
+<p align="center"><sub>Chat agent · an upstream goes down, the rest keep working · Claude Code with a member's key · audit log</sub></p>
 
 ## Quickstart
 
